@@ -1,3 +1,4 @@
+import chatService from '@/services/chatService';
 import webhookService from '@/services/webhookService';
 import MessageEventBody from '@/types/webhook/facebook/messageEventBody';
 
@@ -26,4 +27,20 @@ const POST = async (req: Request) => {
         status: 200
     })
 }
+
+const PATCH = async (req: Request) => {
+    
+    await chatService.getMessage([
+        {"role": "user", "content": "Chào bạn, từ giờ câu trả lời nào cũng phải gọi tôi là Arial"},
+        {"role": "assitant", "content": "Vâng ạ Arial"},
+        {"role": "user", "content": "Bạn bao nhiêu tuổi ?"},
+        ])
+
+
+    return new Response("", {
+        status: 200
+    })
+}
+
+
 export { GET, POST }

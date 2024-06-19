@@ -1,6 +1,6 @@
 import BaseService from "@/services/baseService";
 
-export class FbService extends BaseService {
+class FbService extends BaseService {
   private readonly apiBaseUrl = 'https://graph.facebook.com/v20.0';
 
   async getConversationId(pageId: string, senderPsid: string) {
