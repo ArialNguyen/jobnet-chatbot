@@ -39,4 +39,3 @@ export default interface PostType {
   totalViews: number;
   createdAt: string;
 }
-

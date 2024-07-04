@@ -14,15 +14,27 @@ export interface Messaging {
     recipient: { id: string };
     timestamp: number;
     message: MessagingMessage;
+    postback: any
 }
 
 export interface MessagingMessage {
-    mid: string;
-    text: string;
-    nlp: object;
+    mid?: string;
+    text?: string;
+    attachments?: any
+    nlp?: object;
 }
 
 export interface Message {
     role: string;
     content: string;
 }
+
+export interface PostBack {
+    title: string,
+    payload: string
+    mid: string
+}
+
+
+// Response to facebook
+
