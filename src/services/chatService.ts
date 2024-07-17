@@ -6,6 +6,7 @@ import { QuestionChatbotResponse, OllamaGenerateRes } from "@/types/ollamaRespon
 import fbService from "@/services/fbService";
 import { MessagingMessage } from "@/types/webhook/facebook/messageEventBody";
 import { text } from "stream/consumers";
+import huspotConversationService from "@/services/huspotConversationService";
 
 
 class ChatService extends BaseService {
@@ -38,6 +39,60 @@ class ChatService extends BaseService {
         return this.handleAnswer(pageId, senderPsid, rewriteQues.response as string, posts)
     }
 
+    async sendMessageFromAIHuspot(threadId: string, messages: Array<any>) {
+        let message = {
+            text: "", richText: ""
+        }
+        // Prefix Question
+        // Backend Web Developer lương trên 5 triệu ở Khánh Hòa
+        const rewriteQues = await this.handleQuestion(messages)
+        console.log(rewriteQues.status, rewriteQues.response);
+        if (!rewriteQues.status) {
+            message.text = rewriteQues.response
+            message.richText = `<div><span>${rewriteQues.response} 😥😥😥</span></div>`
+        }
+        else {
+            // Get Data from Vector DB
+            const posts = await this.getPosts(rewriteQues.response as string)
+
+            // Handle Response to user
+            if (posts.length == 0) {
+                // Ask user give more information 
+                message.text = `không thể tìm thấy bài đăng phù hợp với từ khóa của bạn '${rewriteQues.response}'. Bạn hãy cung cấp nhiều thông tin cụ thể hơn như sau: lương mong muốn, địa điểm, ...`, // Need to create prompt to ask user give more information
+                    message.richText = `<div><span>${message.text} 😥😥😥</span></div>`
+            } else {
+                message.text = `Đây là top ${posts.length} bài post về từ khóa '${rewriteQues.response}'.\n ${posts.map(
+                    (post, idx) => { return `${idx + 1}. ${post.title}` }
+                ).join("\n")}`
+                message.richText = `
+                <p>Đây là top ${posts.length} bài post về từ khóa '${rewriteQues.response}'.<a href="${this.clientBaseUrl}/posts?search=${rewriteQues.response}" rel="noopener">Click để xem chi tiết</a></p>
+                <ol>
+                ${posts.map(post => `
+                <li>
+                <a href="${this.clientBaseUrl}/posts/${post.id}" rel="noopener" target="_blank" style="background-color: #ffff04;">
+                    ${post.title}</a>&nbsp;<br>
+                    ${post.business.name}<br>
+                    ${(!/\d/.test(post.minSalaryString)) ? "Thỏa thuận" : `${post.minSalaryString} - ${post.maxSalaryString}`}<br>
+                    ${post.locations.map(location => location.provinceName).join(" - ")}
+                </li>`).join("\n")}
+                </ol>
+                `
+            }
+        }
+        console.log(message.text);
+        console.log(message.richText);
+
+        await huspotConversationService.sendMessageFromAIByDefault({
+            threadId, text: message.text, richText: message.richText
+        })
+    }
+    async sendMessageFromAssistantHuspot(threadId: string) {
+        await huspotConversationService.sendMessageFromAIByDefault({
+            threadId, sender: "ASSISTANT", text: `Vui lòng đợi trong giây lát, chúng tôi sẽ trả lời ngay.`, richText: `<div>Vui lòng đợi trong giây lát, chúng tôi sẽ trả lời ngay</div>`
+        })
+    }
+
+
     async readAllChunks(readableStream: ReadableStream) {
         const reader = readableStream.getReader();
         const chunks = [];
@@ -65,16 +120,6 @@ class ChatService extends BaseService {
                 prompt: prompt
             }),
         })
-
-        // Response Stream with reader Stream
-        // const reader = response.body!!.getReader();
-        // while (true) {
-        //     const { done, value } = await reader.read();
-        //     if (done) {
-        //         break
-        //     }
-        //     process.stdout.write((JSON.parse(new TextDecoder().decode(value)) as OllamaGenerateRes).response)
-        // }
         await this.checkResponseNotOk(response)
         const data = await this.getResponseData<OllamaGenerateRes>(response)
         console.log("Ollama Res: ", data.response);
@@ -87,17 +132,15 @@ class ChatService extends BaseService {
         if (posts.length == 0) {
             // Ask user give more information 
             return {
-                text: `không thể tìm thấy bài đăng phù hợp với từ khóa của bạn '${rewriteQues}'. Bạn hãy cung cấp nhiều thông tin cụ thể hơn như sau: lương mong muốn, địa điểm, ...` // Need to create prompt to ask user give more information
+                text: `không thể tìm thấy bài đăng phù hợp với từ khóa của bạn '${rewriteQues}'. Bạn hãy cung cấp nhiều thông tin cụ thể hơn như sau: lương mong muốn, địa điểm, ...`, // Need to create prompt to ask user give more information
             }
         }
         const postsCard = posts.map(post => ({
             title: post.title,
             image_url: "https://cdn.sanity.io/images/mz2hls6g/production/b1e56a9c6e1e6d81177cbbc273c788795a00f3c1-6000x4002.jpg?w=828&q=75&fit=clip&auto=format" || `${this.apiBaseUrl}/businesses/${post.business.id}/profileImage`,
-            subtitle: `${post.business.name} \n${
-                `${(!/\d/.test(post.minSalaryString)) ? "Thỏa thuận" : `${post.minSalaryString} - ${post.maxSalaryString}`}`
-            } \n${
-                `${post.locations.map(location => location.provinceName).join(" - ")}`
-            }`,
+            subtitle: `${post.business.name} \n${`${(!/\d/.test(post.minSalaryString)) ? "Thỏa thuận" : `${post.minSalaryString} - ${post.maxSalaryString}`}`
+                } \n${`${post.locations.map(location => location.provinceName).join(" - ")}`
+                }`,
             buttons: [
                 {
                     "type": "web_url",
@@ -119,8 +162,8 @@ class ChatService extends BaseService {
         // Send First Message to User
         await fbService.sendOnTyping(pageId, senderPsid)
         await fbService.sendMessage(senderPsid, pageId, {
-            text: `Đây là Top ${postsCard.length} bài đăng về từ khóa '${rewriteQues}'. Xem chi tiết tại đây: ${this.clientBaseUrl}/posts?search=${rewriteQues}` 
-        })  
+            text: `Đây là Top ${postsCard.length} bài đăng về từ khóa '${rewriteQues}'. Xem chi tiết tại đây: ${this.clientBaseUrl}/posts?search=${rewriteQues}`
+        })
         return res
     }
 
@@ -133,7 +176,7 @@ class ChatService extends BaseService {
         // })
         // await this.checkResponseNotOk(res)
         // return this.getResponseData(res) as PostType[]
-        // return [] as PostType[]
+        return [] as PostType[]
         return [
             {
                 "id": "660fb32bebddec564a76ef5e",

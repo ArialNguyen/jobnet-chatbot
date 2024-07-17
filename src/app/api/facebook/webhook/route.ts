@@ -5,9 +5,7 @@ const GET = async (req: Request) => {
     const query = new URLSearchParams(new URL(req.url as string).searchParams)    
     const mode = query.get('hub.mode')
     const token = query.get('hub.verify_token')
-    const challenge = query.get('hub.challenge')
-    console.log(mode, token, challenge);
-    
+    const challenge = query.get('hub.challenge')    
     if (
         mode !== 'subscribe' ||
         token !== process.env.VERIFY_TOKEN_FB
@@ -25,7 +23,7 @@ const POST = async (req: Request) => {
     
     webhookService.receiveWebhookNotification(body as MessageEventBody)
     return new Response("", {
-        status: 200
+        status: 200 
     })
 }
 export { GET, POST}
