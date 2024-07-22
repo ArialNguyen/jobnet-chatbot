@@ -13,22 +13,20 @@ const POST = async (req: Request) => { // For Creation of conversation
     const { threadId, sender } = body
 
     const conversationRes = await huspotConversationService.getMessagesFromConversation(threadId)
-    const conversation = conversationRes.map((con: any) => {
-        return {
-            role: ((con.createdBy as string).includes("A")) ? "assistant" : "user",
-            content: con.text
+    
+    const conversation = conversationRes.map((con: any) => (
+        ((con.createdBy as string).includes("A")) ? `[ASSISTANT] ${con.text}` : `[USER] ${con.text}`
+    ))
+    console.log("Conversation Creation: ", conversation);
+    
+    if ( (conversation[0] as string).includes("[USER]") ) { // Dont need to check cause Conversation only created by Visitor
+        if (sender === "AI") {
+            await chatService.sendMessageFromAIHuspot(threadId, conversation)
+        } else {
+            await chatService.sendMessageFromAssistantHuspot(threadId)
         }
-    })    
-    if (conversation[0]["role"] !== "user") { // Dont need to check cause Conversation only created by Visitor
-        return new Response("Creation only created by Visitor", {
-            status: 400
-        })
     }
-    if (sender === "AI") {
-        await chatService.sendMessageFromAIHuspot(threadId, conversation)
-    } else {
-        await chatService.sendMessageFromAssistantHuspot(threadId)
-    }
+    
     return new Response("", {
         status: 200
     })

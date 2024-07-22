@@ -36,7 +36,7 @@ class HuspotConversationService extends BaseService {
 
   async getMessagesFromConversation(threadId: string) {
 
-    const url = `${this.apiBaseUrl}/threads/${threadId}/messages?limit=5`
+    const url = `${this.apiBaseUrl}/threads/${threadId}/messages`
     const res = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',

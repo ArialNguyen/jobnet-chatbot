@@ -1,5 +1,5 @@
 import BaseService from "@/services/baseService";
-import { SenderInfomation } from "@/types/senderInformation";
+import { SenderInfomation } from "@/services/senderInformation";
 
 class FbService extends BaseService {
   private readonly apiBaseUrl = 'https://graph.facebook.com/v20.0';

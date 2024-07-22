@@ -17,25 +17,69 @@ class ChatService extends BaseService {
 
     private readonly clientBaseUrl = process.env.NEXT_PUBLIC_CLIENT_URL;
 
-    private readonly ollamaBaseUrl = `${process.env.NEXT_PUBLIC_OLLAMA}/api`;
+    private readonly ollamaBaseUrl = "http://localhost:11434/api" || `${process.env.NEXT_PUBLIC_OLLAMA}/ollama-api`;
 
-    private readonly model_name = "aya:8b"
+    private readonly model_name = "ArialNguyen/vistral"
 
-    private readonly questionPrompt = `Đầu tiên tôi muốn bạn tóm tắt câu nói mà người tìm việc muốn hỏi dựa trên những câu hỏi mới nhất trong đoạn hội thoại. Nếu câu nói của người dùng không liên quan đến lĩnh vực tìm việc làm thì bạn hãy viết 1 câu xin lỗi ngắn gọn một cách lịch sự vì không thể hỗ trợ trong lĩnh vực khác và lưu vào 'response' và 'status' bằng 0. Nếu câu nói liên quan đến lĩnh vực tìm việc làm thì bạn cần phải tóm tắt và đầy đủ mong muốn cụ thể những điều gì chằng hạn như lương, địa điểm (nếu có) và lưu vào 'response', lúc này 'status' bằng 1. Hãy chắc chắn rằng phản hồi của bạn là 1 object và không có bất kì kí tự nào khác ngoài object và không cần ý kiến của bạn. Trong object đó chứa 2 thuộc tính là 'status' và 'response'. Ví dụ: Đây là câu trả lời của bạn '{'status': 0, 'response': 'Xin lỗi nhưng tôi không trả lời câu hỏi liên quan'}' về cuộc hội thoại '['role': 'user', 'content': 'Bạn biết chơi game không']'. Bây giờ hãy tóm tắt cuộc hội thoại`
+    // private readonly questionPrompt = `Đầu tiên tôi muốn bạn tóm tắt câu nói mà người tìm việc muốn hỏi dựa trên những câu hỏi mới nhất trong đoạn hội thoại. Nếu câu nói của người dùng không liên quan đến lĩnh vực tìm việc làm thì bạn hãy viết 1 câu xin lỗi ngắn gọn một cách lịch sự vì không thể hỗ trợ trong lĩnh vực khác và lưu vào 'response' và 'status' bằng 0. Nếu câu nói liên quan đến lĩnh vực tìm việc làm thì bạn cần phải tóm tắt và đầy đủ mong muốn cụ thể những điều gì chằng hạn như lương, địa điểm (nếu có) và lưu vào 'response', lúc này 'status' bằng 1. Hãy chắc chắn rằng phản hồi của bạn là 1 object và không có bất kì kí tự nào khác ngoài object và không cần ý kiến của bạn. Trong object đó chứa 2 thuộc tính là 'status' và 'response'. Ví dụ: Đây là câu trả lời của bạn '{'status': 0, 'response': 'Xin lỗi nhưng tôi không trả lời câu hỏi liên quan'}' về cuộc hội thoại '['role': 'user', 'content': 'Bạn biết chơi game không']'. Bây giờ hãy tóm tắt cuộc hội thoại`
+    private questionPrompt = `
+    <s>[INST] Bạn là một trợ lý tìm việc làm hữu ích. Nhiệm vụ của bạn là tạo một đối tượng JSON hợp lệ dựa trên thông tin đã cho - Điều này rất quan trọng. Đối tượng JSON này sẽ có hai thuộc tính là: 'status' ở dạng boolean và 'response' ở dạng string. Tôi sẽ cung cấp cho bạn một cuộc hội thoại về mong muốn tìm việc làm của tìm việc. Từ cuộc hội thoại này, Bạn sẽ phân tích câu hỏi của người tìm việc nên ưu tiên phân tích những câu hỏi mới nhất. Lúc này câu hỏi sẽ có ba trường hợp: 
+    Một là nếu người tìm việc xin chào hay cảm ơn bạn, thì thuộc tính 'status' bằng 0 và 'response' chứa câu xin chào hay cảm ơn của bạn một cách tương ứng.
+    Hai là câu hỏi không liên quan đến lĩnh vực tìm việc làm, thì thuộc tính 'status' bằng 0 và 'response' chứa câu xin lỗi vì không thể trả lời những câu ngoài lĩnh vực tìm việc làm mà bạn tự viết ra, nếu trong đoạn hội thoại có một câu hỏi trước đó không liên quan mà assistant đã xin lỗi rồi và đồng thời câu hỏi mới nhất có liên quan thì bạn hãy sang trường hợp số 3.
+    Ba là câu hỏi liên quan đến lĩnh vực tìm việc làm, bạn sẽ phân tích tên công việc, mức lương mong muốn, địa điểm và tổng hợp chúng thành một câu ngắn gọn dễ hiểu và lưu vào 'response' và 'status' bằng 1. Yêu cầu trong việc phân tích như sau:
+    tên công việc, địa điểm phải ngắn gọn và khoảng lương phải rõ ràng (ưu tiên dạng chữ) với những mức lương khó hiểu ví dụ như: "không lớn hơn 10 triệu" phải dịch rõ ràng là "nhỏ hơn mười triệu", "10-20 triệu" sẽ là "Khoảng mười đến 20 triệu", ... Ngoài các cụm từ 'không lớn hơn', 'không nhỏ hơn', ... bạn sẽ phải tự hiểu và dịch dễ hiểu hơn một cách tương tự bởi ví các cụm từ đó sẽ gây nhiễu thuật toán và điều này rất quan trọng với tôi, Hãy chắc chằn rằng bạn không được bỏ qua yêu cầu này. Lưu ý rằng, bạn chỉ thu thập thông tin, tuyệt đối không được tự ý cung cấp thêm bất kì thông tin gì nếu không phải của người dùng.
+    Vì vậy, ví dụ như sau:
+        [ASSISTANT] Chào bạn, rất vui được hỗ trợ bạn tìm kiếm việc làm. Vui lòng cung cấp thêm thông tin về vị trí mong muốn của bạn, chẳng hạn như kỹ năng và kinh nghiệm cụ thể.
+        [USER] Bạn biết chơi game không, Game gì hay đây ta?
+    sẽ được chuyển đổi thành:
+    [/INST]
+    {
+    "status": 0,
+    "response": "xin lỗi, tôi không thể hỗ trợ bạn về vấn đề không liên quan đến tìm việc làm"
+    }
+    </s>
 
+    [INST]
+    [ASSISTANT] Chào bạn, rất vui được hỗ trợ bạn tìm kiếm việc làm. Vui lòng cung cấp thêm thông tin về vị trí mong muốn của bạn, chẳng hạn như kỹ năng và kinh nghiệm cụ thể.
+    [USER] Thời tiết hôm nay thế nào?
+    [ASSISTANT] xin lỗi, tôi không thể hỗ trợ bạn về vấn đề không liên quan đến tìm việc làm
+    [USER] Tôi muốn tìm việc làm cho lập trình website IT Backend với mức lương lớn 10 triệu
+    [/INST]
+    {
+    "status": 1,
+    "response": "Lập trình viên Website Backend lương lớn hơn mười triệu"
+    }
+    </s>
 
+    [INST]
+    [ASSISTANT] Chào bạn, rất vui được hỗ trợ bạn tìm kiếm việc làm. Vui lòng cung cấp thêm thông tin về vị trí mong muốn của bạn, chẳng hạn như kỹ năng và kinh nghiệm cụ thể.
+    [USER] Tôi muốn tìm công việc lập trình website với lương không nhỏ hơn 10 triệu.
+    [/INST]
+    {
+    "status": 1,
+    "response": "Lập trình viên Website Java lương lớn hơn mười triệu"
+    }
+    </s>
+    [INST]
+    {{}}
+    [/INST]
+    `
+    
+    private getQuestionPrompt(messages: Array<any>){
+        return this.questionPrompt.replace("{{}}", messages.join(" "))
+    }
 
     async getMessage(pageId: string, senderPsid: string, messages: Array<any>) {
 
         // Prefix Question
         const rewriteQues = await this.handleQuestion(messages)
-        console.log(rewriteQues.status, rewriteQues.response);
+        console.log("Pass: ", rewriteQues.status, rewriteQues.response);
         if (!rewriteQues.status) return { text: rewriteQues.response }
 
         // Get Data from Vector DB
         const posts = await this.getPosts(rewriteQues.response as string)
 
-        // Handle Response to user
+        // Handle Response to user 
         return this.handleAnswer(pageId, senderPsid, rewriteQues.response as string, posts)
     }
 
@@ -46,10 +90,9 @@ class ChatService extends BaseService {
         // Prefix Question
         // Backend Web Developer lương trên 5 triệu ở Khánh Hòa
         const rewriteQues = await this.handleQuestion(messages)
-        console.log(rewriteQues.status, rewriteQues.response);
         if (!rewriteQues.status) {
             message.text = rewriteQues.response
-            message.richText = `<div><span>${rewriteQues.response} 😥😥😥</span></div>`
+            message.richText = `<div><span>${rewriteQues.response} 😉😘💖💖</span></div>`
         }
         else {
             // Get Data from Vector DB
@@ -79,8 +122,6 @@ class ChatService extends BaseService {
                 `
             }
         }
-        console.log(message.text);
-        console.log(message.richText);
 
         await huspotConversationService.sendMessageFromAIByDefault({
             threadId, text: message.text, richText: message.richText
@@ -109,9 +150,8 @@ class ChatService extends BaseService {
 
     async handleQuestion(messages: Array<any>) {
         // Handle question and chat history to make an fully question.
-        let prompt = `
-            ${this.questionPrompt} ${JSON.stringify(messages)}
-        `.trim()
+        let prompt = this.getQuestionPrompt(messages).trim()
+        
         let response = await fetch(`${this.ollamaBaseUrl}/generate`, {
             method: "POST",
             body: JSON.stringify({
@@ -120,9 +160,10 @@ class ChatService extends BaseService {
                 prompt: prompt
             }),
         })
-        await this.checkResponseNotOk(response)
+        this.checkResponseNotOk(response)
         const data = await this.getResponseData<OllamaGenerateRes>(response)
-        console.log("Ollama Res: ", data.response);
+        console.log("Question: ", data.response);
+        
 
         return JSON.parse(data.response.substring(data.response.indexOf("{"), data.response.indexOf("}") + 1)) as QuestionChatbotResponse
     }
@@ -176,7 +217,7 @@ class ChatService extends BaseService {
         // })
         // await this.checkResponseNotOk(res)
         // return this.getResponseData(res) as PostType[]
-        return [] as PostType[]
+        // return [] as PostType[]
         return [
             {
                 "id": "660fb32bebddec564a76ef5e",

@@ -57,7 +57,7 @@ class WebhookService {
   ) {
     let response = {}
     if (receivedMessage.text) {
-       
+
       const conversationId = await fbService.getConversationId(
         pageId,
         senderPsid,
@@ -65,12 +65,12 @@ class WebhookService {
       const historyMessages = (
         await fbService.getHistoryMessages(conversationId)
       )
-        .map((item) => ({
-          role: item.from.id === senderPsid ? 'user' : 'assistant',
-          content: item.message,
-        })).slice(0, 5).reverse() // limit 5 current chat
-            
+        .map((item) => (
+          (item.from.id === senderPsid) ? `[USER] ${item.message}` : `[ASSISTANT] ${item.message}`
+        )).slice(0, 5).reverse() // limit 5 current chat
+
       if (receivedMessage.text) {
+        
         const chatRes = await chatService.getMessage(pageId, senderPsid, historyMessages)
         response = chatRes
       }
