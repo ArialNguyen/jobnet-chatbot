@@ -18,6 +18,8 @@ const GET = async (req: Request) => {
 }
 
 const POST = async (req: Request) => {
+    console.log("Webhook fb Recieved");
+    
     const body = await new Response(req.body).json()
     
     webhookService.receiveWebhookNotification(body as MessageEventBody)

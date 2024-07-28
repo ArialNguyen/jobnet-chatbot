@@ -13,8 +13,6 @@ const POST = async (req: Request) => {
     const { objectId: threadId, changeFlag, attemptNumber } = body[0]
 
     if (changeFlag == "NEW_MESSAGE" && attemptNumber == 0) {
-        console.log("Hubspot New Message: ", attemptNumber);
-
         const conversationRes = await huspotConversationService.getMessagesFromConversation(threadId)
 
         const messageFromAI = conversationRes.find((message: any) => (message["createdBy"] as string).includes("A-"))
@@ -24,12 +22,20 @@ const POST = async (req: Request) => {
         // Check thread is AI chatbox
         if ((conversationRes[0]["createdBy"] as string).includes("V-") && messageFromAI !== undefined && messageFromAI["createdBy"] === process.env.HUBSPOT_AI_ACTOR_ID) { // If sender is Agent
             const conversation = conversationRes.map((con: any) => (
-                ((con.createdBy as string).includes("A")) ? `[ASSISTANT] ${con.text}` : `[USER] ${con.text}`
+                ((con.createdBy as string).includes("A")) ? `ASSISTANT: ${con.text}` : `USER: ${con.text}`
             )).slice(0, 5).reverse()
             console.log("conversation:", conversation);
-            await chatService.sendMessageFromAIHuspot(threadId, conversation)
+            try {
+                await chatService.sendMessageFromAIHubspot(threadId, conversation)
+            } catch (error: any) {
+                if (error.message == "WRONG_FORMAT_OLLAMA_RESPONE") {
+                    await huspotConversationService.sendMessageFromAIByDefault({
+                        threadId, text: "Oops, something wrong here. Please try again.", richText: "Oops, something wrong here. Please try again 😥😥😥"
+                    })
+                }
+            }
         }
-    }else if (changeFlag == 'CREATION') {
+    } else if (changeFlag == 'CREATION') {
         // Nothing To do now.
     }
     return new Response("Message Sent!!!", {

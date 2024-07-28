@@ -1,7 +1,7 @@
 import BaseService from "@/services/baseService";
 
 class HuspotConversationService extends BaseService {
-  private readonly apiBaseUrl = `${process.env.NEXT_PUBLIC_HUSPOT_API_URL}/conversations/v3/conversations`
+  private readonly apiBaseUrl = `${process.env.NEXT_PUBLIC_HUBSPOT_API_URL}/conversations/v3/conversations`
 
   async getQuestion(threadId: string, messageId: string) {
 

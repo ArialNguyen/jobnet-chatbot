@@ -1,5 +1,6 @@
 import chatService from "@/services/chatService";
 import fbService from "@/services/fbService";
+import ErrorType from "@/types/error";
 import HubQueryDto from "@/types/webhook/facebook/hubAuthenticagte";
 import MessageEventBody, { Entry, MessagingMessage, PostBack } from "@/types/webhook/facebook/messageEventBody";
 
@@ -20,12 +21,13 @@ class WebhookService {
   }
 
   async receiveWebhookNotification(body: MessageEventBody) {
+    let pageId = "", senderPsid = ""
     try {
       const handleEntry = async (entry: Entry) => {
 
         const webhookEvent = entry.messaging[0];
-        const senderPsid = webhookEvent.sender.id;
-        const pageId = webhookEvent.recipient.id;
+        senderPsid = webhookEvent.sender.id;
+        pageId = webhookEvent.recipient.id;
         console.log("Sender ID: ", senderPsid);
 
         // Check if the event is a message or postback and
@@ -34,8 +36,12 @@ class WebhookService {
 
           await this.handlePostback(pageId, senderPsid, webhookEvent.postback);
         } else if (webhookEvent.message) {
-          console.log("MESSAGE", webhookEvent.message.text);
+          console.log("MESSAGE", webhookEvent.message.text)
+
           await fbService.sendOnTyping(pageId, senderPsid)
+          // await fbService.sendMessage(senderPsid, pageId, {
+          //   text: `Please wait a moment, I'm generating the results for you... 🥰🥰🥰`, // Need to create prompt to ask user give more information
+          // });
           await this.handleMessage(senderPsid, pageId, webhookEvent.message);
         }
       }
@@ -44,8 +50,14 @@ class WebhookService {
       for (const entry of body.entry) {
         await handleEntry(entry)
       }
-    } catch (error) {
-
+    } catch (error: any) {
+      if (error.message == "WRONG_FORMAT_OLLAMA_RESPONE") {
+        // Catch error if ollama response not excepted format --JSON
+        await fbService.sendOnTyping(pageId, senderPsid)
+        await fbService.sendMessage(senderPsid, pageId, {
+          text: `Oops, something wrong here. Please try again.`, // Need to create prompt to ask user give more information
+        });
+      }
     }
     return 'EVENT_RECEIVED';
   }
@@ -62,15 +74,17 @@ class WebhookService {
         pageId,
         senderPsid,
       );
+
       const historyMessages = (
         await fbService.getHistoryMessages(conversationId)
-      )
+      ).filter((item) => item.message !== "")
         .map((item) => (
-          (item.from.id === senderPsid) ? `[USER] ${item.message}` : `[ASSISTANT] ${item.message}`
+          (item.from.id === senderPsid) ? `USER: ${item.message}` : `ASSISTANT: ${item.message}`
         )).slice(0, 5).reverse() // limit 5 current chat
 
       if (receivedMessage.text) {
-        
+        console.log("conversation: ", historyMessages);
+
         const chatRes = await chatService.getMessage(pageId, senderPsid, historyMessages)
         response = chatRes
       }
@@ -80,7 +94,7 @@ class WebhookService {
       console.log("attachments: ", receivedMessage.attachments[0]);
 
       // Gets the URL of the message attachment
-      let attachment_url = receivedMessage.attachments[0].payload.url;
+      let attachment_url = receivedMessage.attachments[0].payload.url
       // Send unsupported method to user || send notification to admin for reply
     }
     await fbService.sendMessage(senderPsid, pageId, response);
