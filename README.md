@@ -50,4 +50,8 @@ ssh -L 11434:localhost:11434 root@[server address]
 
 ### Need To upgrade
 ## Chatbot
-# List of posts. Design the prompt to catch the number of List Post to get the limit
+# wrong number ","
+# ask for specific job
+# Search with business name -- Prompt Context
+# Search with position -- Prompt context
+# Search with location -- Prompt context

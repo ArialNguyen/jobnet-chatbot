@@ -7,6 +7,9 @@ export interface QuestionChatbotResponse {
     } |  null,
     relevant: {
         response: string,
+        minSalary: number,
+        maxSalary: number
         numberOfList: number
+        professions: string
     } |  null,
 }

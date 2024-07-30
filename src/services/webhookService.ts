@@ -1,6 +1,5 @@
 import chatService from "@/services/chatService";
 import fbService from "@/services/fbService";
-import ErrorType from "@/types/error";
 import HubQueryDto from "@/types/webhook/facebook/hubAuthenticagte";
 import MessageEventBody, { Entry, MessagingMessage, PostBack } from "@/types/webhook/facebook/messageEventBody";
 
@@ -28,7 +27,7 @@ class WebhookService {
         const webhookEvent = entry.messaging[0];
         senderPsid = webhookEvent.sender.id;
         pageId = webhookEvent.recipient.id;
-        console.log("Sender ID: ", senderPsid);
+        console.log("Sender ID: ", senderPsid, pageId);
 
         // Check if the event is a message or postback and
         // pass the event to the appropriate handler function
@@ -67,7 +66,7 @@ class WebhookService {
     pageId: string,
     receivedMessage: MessagingMessage,
   ) {
-    let response = {}
+    let response = {}    
     if (receivedMessage.text) {
 
       const conversationId = await fbService.getConversationId(
@@ -103,6 +102,7 @@ class WebhookService {
   private async handlePostback(pageId: string, senderPsid: string, postback: PostBack) {
     console.log(postback);
     switch (postback.payload) {
+      case "WELCOME_MESSAGE":
       case 'GET_STARTED':
 
         let { first_name, last_name } = await fbService.getFacebookUsername(senderPsid);
