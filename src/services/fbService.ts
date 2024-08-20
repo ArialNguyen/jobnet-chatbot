@@ -2,7 +2,7 @@ import BaseService from "@/services/baseService";
 import { SenderInfomation } from "@/services/senderInformation";
 
 class FbService extends BaseService {
-  private readonly apiBaseUrl = 'https://graph.facebook.com/v20.0';
+  private readonly apiBaseUrl = process.env.NEXT_PUBLIC_GRAPH_API_FB_URL
 
   async getConversationId(pageId: string, senderPsid: string) {
     const params = new URLSearchParams()
@@ -90,6 +90,7 @@ class FbService extends BaseService {
     };
 
     const url = `${this.apiBaseUrl}/${pageId}/messages?${params.toString()}`
+    
     const res = await fetch(url, {
       method: "POST",
       body: JSON.stringify(reqBody),
@@ -97,7 +98,6 @@ class FbService extends BaseService {
         'Content-Type': 'application/json',
       }
     })
-
     await this.checkResponseNotOk(res)
   }
 }

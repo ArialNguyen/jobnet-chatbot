@@ -1,5 +1,6 @@
 import webhookService from '@/services/webhookService';
 import MessageEventBody from '@/types/webhook/facebook/messageEventBody';
+
 const GET = async (req: Request) => {
     const query = new URLSearchParams(new URL(req.url as string).searchParams)
     const mode = query.get('hub.mode')

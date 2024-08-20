@@ -179,7 +179,7 @@ class ChatService extends BaseService {
         }
         const postsCard = posts.map(post => ({
             title: post.title,
-            image_url: "https://cdn.sanity.io/images/mz2hls6g/production/b1e56a9c6e1e6d81177cbbc273c788795a00f3c1-6000x4002.jpg?w=828&q=75&fit=clip&auto=format" || `${this.apiBaseUrl}/businesses/${post.business.id}/profileImage`,
+            image_url: `${this.apiBaseUrl}/businesses/${post.business.id}/profileImage`,
             subtitle: `${post.business.name} \n${`${(!/\d/.test(post.minSalaryString)) ? "Thỏa thuận" : `${post.minSalaryString} - ${post.maxSalaryString}`}`
                 } \n${`${post.locations.map(location => location.provinceName).join(" - ")}`
                 }`,

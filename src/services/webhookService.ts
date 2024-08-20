@@ -38,6 +38,7 @@ class WebhookService {
           console.log("MESSAGE", webhookEvent.message.text)
 
           await fbService.sendOnTyping(pageId, senderPsid)
+          
           // await fbService.sendMessage(senderPsid, pageId, {
           //   text: `Please wait a moment, I'm generating the results for you... 🥰🥰🥰`, // Need to create prompt to ask user give more information
           // });
@@ -73,7 +74,6 @@ class WebhookService {
         pageId,
         senderPsid,
       );
-
       const historyMessages = (
         await fbService.getHistoryMessages(conversationId)
       ).filter((item) => item.message !== "")
