@@ -34,7 +34,8 @@ class ChatService extends BaseService {
     Example for Case 1: User ask "Thời tiết hôm nay thế nào?" your JSON can be like {"normalQuestion": null, "irrelevantQuestion": {"response": "Xin lỗi, mình chỉ có thể hỗ trợ bạn tìm kiếm việc làm. 😔"}, "relevant": null}
     
     Case 2: In this case make sure both attribute "irrelevantQuestion" and "relevant" is null. If the user just say hello, thanks, or asking about you Then you will answer naturally like a job search support staff (make it longer and easy to understand) and save your reply to "response" of "normalQuestion" field. 
-    
+    Example for Case 2: User ask "Xin chào" your JSON can be like {"normalQuestion": {"response": "Xin chào, tôi có thể hỗ trợ bạn trong việc tìm kiếm bài đăng"}, "irrelevantQuestion": null, "relevant": null}
+
     Case 3: In this case, make sure both the "normalQuestion" and "irrelevantQuestion" properties are null. If the user question is related to the field of job search support, then you will follow the workflow below:
     1. Prioritize the analysis of the latest messages and only analyze the job title, location, position and summarize them into a short, easy-to-understand sentence (please do not include salary information -- important) and save them in the "response" of the "relevant" field. The requirements in the analysis are as follows:
     The job title, location and position must be concise. Note that you only collect information, absolutely do not provide any additional information arbitrarily if that information is not from the user.
@@ -62,8 +63,8 @@ class ChatService extends BaseService {
         const rewriteQues = await this.handleQuestion(messages) // 0,1,2 
         console.log("rewriteQues:", rewriteQues);
 
-        if (rewriteQues.normalQuestion) return { text: rewriteQues.normalQuestion.response }
-        else if (rewriteQues.irrelevantQuestion) return { text: rewriteQues.irrelevantQuestion.response }
+        if ( rewriteQues.irrelevantQuestion && !rewriteQues.relevant ) return { text: rewriteQues.irrelevantQuestion.response  }
+        else if (rewriteQues.normalQuestion && !rewriteQues.relevant && !rewriteQues.irrelevantQuestion ) return { text: rewriteQues.normalQuestion.response }
 
         // Get Data from Vector DB
         const numberOfList = rewriteQues.relevant!!.numberOfList || 7
@@ -191,6 +192,7 @@ class ChatService extends BaseService {
                 }
             ]
         })).slice(0, 10)
+        console.log("Image URL: " + postsCard[0]['image_url'])
 
         const res = {
             attachment: {
