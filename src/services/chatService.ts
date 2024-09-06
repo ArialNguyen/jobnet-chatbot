@@ -20,32 +20,20 @@ class ChatService extends BaseService {
 
     private questionPrompt_gemini = `
     You are a helpful job search assistant. Please return JSON describing the user's question in this conversation using the following schema:
-    { "normalQuestion": NORMAL, "irrelevantQuestion": IRRELEVANT, "relevant": RELEVANT}
-    NORMAL = { "response": str }
-    IRRELEVANT = { "response": str }
-    RELEVANT = { "response": str, "minSalary": number, "maxSalary": number, "numberOfList": number, 'professions': list[str]}
-    All fields are required.
+    { "response": str, "minSalary": number, "maxSalary": number, "numberOfList": number, 'professions': list[str] }
     Important: Only return a single piece of valid JSON text.
 
     Here is the workflow to apply data into the JSON:
-    1. The first thing you need to do is summarize the user's questions from the conversation and always prioritize the latest message.
-    2. Once you have the user's latest question, do one of the following three things if correct:
-    Case 1: In this case make sure both attribute "normalQuestion" and "relevant" is null. If user ask question that are not related to job search support (such as weather, news, etc.), write an apology sentence for not being able to answer questions that are not related to job search and save to "response" of "irrelevantQuestion" field.
-    Example for Case 1: User ask "Thời tiết hôm nay thế nào?" your JSON can be like {"normalQuestion": null, "irrelevantQuestion": {"response": "Xin lỗi, mình chỉ có thể hỗ trợ bạn tìm kiếm việc làm. 😔"}, "relevant": null}
-    
-    Case 2: In this case make sure both attribute "irrelevantQuestion" and "relevant" is null. If the user just say hello, thanks, or asking about you Then you will answer naturally like a job search support staff (make it longer and easy to understand) and save your reply to "response" of "normalQuestion" field. 
-    Example for Case 2: User ask "Xin chào" your JSON can be like {"normalQuestion": {"response": "Xin chào, tôi có thể hỗ trợ bạn trong việc tìm kiếm bài đăng"}, "irrelevantQuestion": null, "relevant": null}
+    The first thing you need to do is summarize the user's questions from the conversation and always prioritize the latest message. After you have the user's latest question, do the following.
 
-    Case 3: In this case, make sure both the "normalQuestion" and "irrelevantQuestion" properties are null. If the user question is related to the field of job search support, then you will follow the workflow below:
-    1. Prioritize the analysis of the latest messages and only analyze the job title, location, position and summarize them into a short, easy-to-understand sentence (please do not include salary information -- important) and save them in the "response" of the "relevant" field. The requirements in the analysis are as follows:
-    The job title, location and position must be concise. Note that you only collect information, absolutely do not provide any additional information arbitrarily if that information is not from the user.
+    1. Prioritize the analysis of the latest messages and only analyze the job title, location, position and summarize them into a short, easy-to-understand sentence (please do not include salary information -- important) and save them in the "response". The requirements in the analysis are as follows: The job title, location and position must be concise. Note that you only collect information, absolutely do not provide any additional information arbitrarily if that information is not from the user.
     2. I will give you a list of job professions, your task is to find the job professions that the user wants to ask in my profession list and save it to 'professions', if you don't find any suitable professions in my list then put an empty list in "professions" (Absolutely do not save professions that are not in my list in the 'professions' attribute -- Very important)
     3. If the the newest user question contains information about the salary. I need you to analyze the minimum salary and save it in 'minSalary' (if any) and analyze the largest salary and save it in 'maxSalary' (if any). If the salary not contains, both 'minSalary' and 'maxSalary' fields are null.
     4. If the user's latest question (Analyze only user questions, ignore staff answers) asks for a list of posts (jobs) then you will store the number of listings in the "numberOfList" field, otherwise enter null in "numberOfList".
-    Example for Case 3: User say "Tôi cần tìm công việc kiến trúc sư lương 15-20 không nhỏ hơn 15 triệu" your JSON can be like {"normalQuestion": null, "irrelevantQuestion": null, "relevant": {"response": "kiến trúc sư", "professions": ["In ấn / Xuất bản", "Nội ngoại thất", "Mỹ thuật / Nghệ thuật / Thiết kế", "Kiến trúc", "Xây dựng"], "minSalary": 15000000, "maxSalary": null, "numberOfList": null}}
-    Another Example for Case 3: User ask "Tìm cho tôi 5 bài đăng về Lập trình viên với mức lương không lớn hơn 10 triệu" your JSON can be like {"normalQuestion": null, "irrelevantQuestion": null, "relevant": {"response": "Lập trình viên", "professions": ["CNTT - Phần cứng / Mạng", "CNTT - Phần mềm", ], "minSalary": null, "maxSalary": 15000000, "numberOfList": 5}}
+    Example: User say "Tôi cần tìm công việc kiến trúc sư lương 15-20 không nhỏ hơn 15 triệu" your JSON can be like {"response": "kiến trúc sư", "professions": ["In ấn / Xuất bản", "Nội ngoại thất", "Mỹ thuật / Nghệ thuật / Thiết kế", "Kiến trúc", "Xây dựng"], "minSalary": 15000000, "maxSalary": null, "numberOfList": null}
+    Another Example: User ask "Tìm cho tôi 5 bài đăng về Lập trình viên với mức lương không lớn hơn 10 triệu" your JSON can be like {"response": "Lập trình viên", "professions": ["CNTT - Phần cứng / Mạng", "CNTT - Phần mềm", ], "minSalary": null, "maxSalary": 15000000, "numberOfList": 5}
     
-    Notice: You can use the example above for each case but I want you to create new sentences in 'response' field to see the difference better. And Your answer the sam e language with user and can include some emojis for that situation (work for Case 1 and 2 execept case 3). And each separate sentence must be begin with new line (specifically adding the character '\n' at the end of each sentence).
+    Notice: Your answer the sam e language with user. And each separate sentence must be begin with new line (specifically adding the character '\n' at the end of each sentence).
     Here is conversation:
     {{messages}}
     Here is job professions:
@@ -60,24 +48,45 @@ class ChatService extends BaseService {
     async getMessage(pageId: string, senderPsid: string, messages: Array<any>) {
 
         // Prefix Question
-        const rewriteQues = await this.handleQuestion(messages) // 0,1,2 
-        console.log("rewriteQues:", rewriteQues);
+        // Check if enough standard
 
-        if ( rewriteQues.irrelevantQuestion && !rewriteQues.relevant ) return { text: rewriteQues.irrelevantQuestion.response  }
-        else if (rewriteQues.normalQuestion && !rewriteQues.relevant && !rewriteQues.irrelevantQuestion ) return { text: rewriteQues.normalQuestion.response }
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/chatgpt`, {
+            method: "POST",
+            body: JSON.stringify({
+                messages: messages.map((message: string) => {
+                    return {
+                        role: (message.substring(0, message.indexOf(":")) == "USER") ? "user" : "assistant",
+                        content: message.substring(message.indexOf(":") + 1)
+                    }
+                })
+            })
+        })
 
-        // Get Data from Vector DB
-        const numberOfList = rewriteQues.relevant!!.numberOfList || 7
+        const data = await response.text()
+        console.log("DATA: ", data);
 
-        const minSalary = rewriteQues.relevant!!.minSalary
-        const maxSalary = rewriteQues.relevant!!.maxSalary
+        if (data == "OK") { // enough standards
+            // Get Data from Vector DB
+            const rewriteQues = await this.handleQuestion(messages) // 0,1,2 
+            console.log("rewriteQues:", rewriteQues)
 
-        const professions = rewriteQues.relevant!!.professions
+            const numberOfList = rewriteQues.numberOfList || 7
 
-        const posts = (await this.getPosts(rewriteQues.relevant!!.response as string, minSalary, maxSalary, professions)).slice(0, numberOfList)
+            const minSalary = rewriteQues.minSalary
+            const maxSalary = rewriteQues.maxSalary
 
-        // Handle Response to user 
-        return this.handleAnswer(pageId, senderPsid, rewriteQues.relevant!!.response as string, posts)
+            const professions = rewriteQues.professions
+
+            const posts = (await this.getPosts(rewriteQues.response as string, minSalary, maxSalary, professions)).slice(0, numberOfList)
+
+            // Handle Response to user 
+            return this.handleAnswer(pageId, senderPsid, rewriteQues.response as string, posts)
+        } else {
+            return {
+                text: data
+            }
+        }
+
     }
 
     async sendMessageFromAIHubspot(threadId: string, messages: Array<any>) {
@@ -85,41 +94,46 @@ class ChatService extends BaseService {
             text: "", richText: ""
         }
         // Prefix Question
-        const rewriteQues = await this.handleQuestion(messages)
-        console.log("rewriteQues: ", rewriteQues);
+        // Check if enough standard
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/chatgpt`, {
+            method: "POST",
+            body: JSON.stringify({
+                messages: messages.map((message: string) => {
+                    return {
+                        role: (message.substring(0, message.indexOf(":")) == "USER") ? "user" : "assistant",
+                        content: message.substring(message.indexOf(":") + 1)
+                    }
+                })
+            })
+        })
 
-        if (rewriteQues.irrelevantQuestion) {
-            const res = rewriteQues.irrelevantQuestion.response.split("\n").map(sentence => `<p>${sentence}</p>`).join("")
-            message.text = rewriteQues.irrelevantQuestion.response
-            message.richText = `<div>${res}</div>`
-        }
-        else if (rewriteQues.normalQuestion && !rewriteQues.relevant) {
-            const res = rewriteQues.normalQuestion.response.split("\n").map(sentence => `<p>${sentence}</p>`).join("")
-
-            message.text = rewriteQues.normalQuestion.response
-            message.richText = `<div>${res}</div>`
-        }
-        else {
-            const numberOfList = rewriteQues.relevant!!.numberOfList || 7
-
-            const minSalary = rewriteQues.relevant!!.minSalary
-            const maxSalary = rewriteQues.relevant!!.maxSalary
-
-            const professions = rewriteQues.relevant!!.professions
+        const data = await response.text()
+        console.log("DATA: ", data);
+        if (data == "OK") { // enough standards
             // Get Data from Vector DB
-            const posts = (await this.getPosts(rewriteQues.relevant!!.response as string, minSalary, maxSalary, professions)).slice(0, numberOfList)
+            const rewriteQues = await this.handleQuestion(messages)
+            console.log("rewriteQues: ", rewriteQues);
+
+            const numberOfList = rewriteQues.numberOfList || 7
+
+            const minSalary = rewriteQues.minSalary
+            const maxSalary = rewriteQues.maxSalary
+
+            const professions = rewriteQues.professions
+
+            const posts = (await this.getPosts(rewriteQues.response as string, minSalary, maxSalary, professions)).slice(0, numberOfList)
 
             // Handle Response to user
             if (posts.length == 0) {
                 // Ask user give more information 
-                message.text = `không thể tìm thấy bài đăng phù hợp với từ khóa của bạn '${rewriteQues.relevant!!.response}'. Bạn hãy cung cấp nhiều thông tin cụ thể hơn như sau: lương mong muốn, địa điểm, ...`, // Need to create prompt to ask user give more information
+                message.text = `không thể tìm thấy bài đăng phù hợp với từ khóa của bạn '${rewriteQues.response}'. Bạn hãy cung cấp nhiều thông tin cụ thể hơn như sau: lương mong muốn, địa điểm, ...`, // Need to create prompt to ask user give more information
                     message.richText = `<div><span>${message.text} 😥😥😥</span></div>`
             } else {
-                message.text = `Đây là top ${posts.length} bài post về từ khóa '${rewriteQues.relevant!!.response}'.\n ${posts.map(
+                message.text = `Đây là top ${posts.length} bài post về từ khóa '${rewriteQues.response}'.\n ${posts.map(
                     (post, idx) => { return `${idx + 1}. ${post.title}` }
                 ).join("\n")}`
                 message.richText = `
-                <p>Đây là top ${posts.length} bài post về từ khóa '${rewriteQues.relevant!!.response}'.<a href="${this.clientBaseUrl}/posts?search=${rewriteQues.relevant!!.response}" rel="noopener">Click để xem chi tiết</a></p>
+                <p>Đây là top ${posts.length} bài post về từ khóa '${rewriteQues.response}'.<a href="${this.clientBaseUrl}/posts?search=${rewriteQues.response}" rel="noopener">Click để xem chi tiết</a></p>
                 <ol>
                 ${posts.map(post => `
                 <li>
@@ -132,8 +146,10 @@ class ChatService extends BaseService {
                 </ol>
                 `
             }
+        } else {
+            message.text = data
+            message.richText = `<div>${data}</div>`
         }
-
         await huspotConversationService.sendMessageFromAIByDefault({
             threadId, text: message.text, richText: message.richText
         })

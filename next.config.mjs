@@ -1,6 +1,4 @@
 /** @type {import('next').NextConfig} */
-import dns from 'dns';
-dns.setDefaultResultOrder("ipv4first")
 
 const nextConfig = {
     reactStrictMode: false,
@@ -10,7 +8,7 @@ const nextConfig = {
         NEXT_PUBLIC_API_URL: "http://localhost:8080",
         NEXT_PUBLIC_CLIENT_URL: "http://localhost:3002",
         NEXT_PUBLIC_HUBSPOT_API_URL: "https://api.hubapi.com",
-        NEXT_PUBLIC_ELASTIC: "http://127.0.0.1:9201",
+        NEXT_PUBLIC_ELASTIC: "http://localhost:9201",
         // Gemini API
         NEXT_PUBLIC_GEMINI_API_KEY: "AIzaSyChBVi68KPbC64ZFmPfA7t1WIkXk6IkE_o", 
         NEXT_PUBLIC_GEMINI_MODEL_NAME: "gemini-1.5-flash",
@@ -21,7 +19,9 @@ const nextConfig = {
         HUSPOT_TOKEN: "pat-na1-6c5be889-36df-4067-96db-15fc10dd2ed8",
         HUSPOT_CLIENT_SECRET_ID: "a2d43f99-c475-4e87-84bc-4bcf1043fb96",
         HUBSPOT_AI_ACTOR_ID: "A-68727367",
-        HUBSPOT_ASSISTANT_ACTOR_ID: "A-68645562"
+        HUBSPOT_ASSISTANT_ACTOR_ID: "A-68645562",
+        // ChatGPT
+        OPENAI_API_KEY:"sk-bUSX4-ge7GKSWEg42dqhVdTdTRQVRclUC1h-ZgMc_oT3BlbkFJnE0srGpCQRXlxP4lfQuaZ5zpEAPg9T_VMp7hM1owgA"
     }
 };
 

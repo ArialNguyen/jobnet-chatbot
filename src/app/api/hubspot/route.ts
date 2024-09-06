@@ -16,8 +16,8 @@ const POST = async (req: Request) => { // For Creation of conversation
 
     const conversation = conversationRes.map((con: any) => (
         ((con.createdBy as string).includes("A")) ? `ASSISTANT: ${con.text}` : `USER: ${con.text}`
-    )).slice(0, 5).reverse()
-    console.log("Conversation Creation: ", conversation);
+    )).slice(0, 10).reverse()
+    console.log("Conversation Creation: ", conversation, sender);
 
     if ((conversation[0] as string).includes("USER:")) { // Dont need to check cause Conversation only created by Visitor
         if (sender === "AI") {

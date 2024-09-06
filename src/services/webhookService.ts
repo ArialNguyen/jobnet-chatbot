@@ -79,7 +79,7 @@ class WebhookService {
       ).filter((item) => item.message !== "")
         .map((item) => (
           (item.from.id === senderPsid) ? `USER: ${item.message}` : `ASSISTANT: ${item.message}`
-        )).slice(0, 5).reverse() // limit 5 current chat
+        )).slice(0, 10).reverse() // limit 10 current chat
 
       if (receivedMessage.text) {
         console.log("conversation: ", historyMessages);

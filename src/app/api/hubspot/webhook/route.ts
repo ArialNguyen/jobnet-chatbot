@@ -23,7 +23,7 @@ const POST = async (req: Request) => {
         if ((conversationRes[0]["createdBy"] as string).includes("V-") && messageFromAI !== undefined && messageFromAI["createdBy"] === process.env.HUBSPOT_AI_ACTOR_ID) { // If sender is Agent
             const conversation = conversationRes.map((con: any) => (
                 ((con.createdBy as string).includes("A")) ? `ASSISTANT: ${con.text}` : `USER: ${con.text}`
-            )).slice(0, 5).reverse()
+            )).slice(0, 10).reverse()
             console.log("conversation:", conversation);
             try {
                 await chatService.sendMessageFromAIHubspot(threadId, conversation)
