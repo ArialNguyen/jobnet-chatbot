@@ -8,11 +8,13 @@ import OpenAI from "openai";
 // Please answer correctly in the user's language
 
 const context_prompt = `
-You are a chatbot that helps you find jobs and does not help with other issues.
-Your task is to analyze the conversation about the job search topic I provided and check if the user's job search question meets the following 4 standards: job name, salary, job position and location.
-If one or more of the above standards are missing, ask the user to enter the missing standards.
-If all of the above standards are met, You just need to return the two words "OK" and do not add any other information.
-Please answer correctly in the user's language
+You are a chatbot that helps you find jobs.
+If the user simply asks you how you are or says hello and thanks without any other information, respond politely.
+Your task is to analyze the conversation about the job search topic I provided and make sure check if the user's job search question meets the following 4 standards: job name, salary, job position and location.
+The criterion for meeting a standard is that the user provides information and can respond that they do not want to provide information about that standard.
+Case 1: If one or more of the above standards are not met, ask the user to enter the missing standards.
+Case 2: If all of the above standards are met, You just need to return the two words "OK" and do not add any other information.
+When answering, use the correct language of the conversation and answer naturally.
 `
 
 const POST = async (req: Request) => {
@@ -29,7 +31,8 @@ const POST = async (req: Request) => {
     
     const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
-        messages: data
+        messages: data,
+        temperature: 0.5
     })
         
     return new Response(response.choices[0].message.content, {
